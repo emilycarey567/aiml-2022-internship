@@ -6,15 +6,21 @@ then
     exit 1
     
 else
-    echo "Starting up docker instance..."
+    echo "To start up the environment, type this 'source activate opencvconda'"
 
-    cmp_volumes="--volume=$(pwd):/app/:rw"
+    
+    # echo "Starting up docker instance..."
 
-    docker run --rm -ti \
-        $cmp_volumes \
-        -it \
-        --gpus all \
-        --ipc host \
-        imagename \
-        /bin/bash
+    # cmp_volumes="--volume=$(pwd):/app/:rw"
+
+    # docker run --rm -ti \
+    #     $cmp_volumes \
+    #     -it \
+    #     -e DISPLAY=$DISPLAY \
+    #     -v /tmp/.X11-unix:/tmp/.X11-unix \
+    #     --device=/dev/video0:/dev/video0 \
+    #     --ipc host \
+    #     imagename:latest \
+    #     /bin/bash
+    #--device=/dev/video0:/dev/video0 -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY=$DISPLAY \
 fi
