@@ -14,7 +14,7 @@ face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_fronta
 eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
 
 # iterate through the filenames and load each frame
-for filename in ['data/image.png']: #filenames:
+for filename in ['data/image6.png']: #filenames:
     # try to load the frame from the file
     try:
         if '.npy' in filename:

@@ -6,11 +6,13 @@
   * Edge detection: using OpenCV or other image processing libraries to detect edges in images
 
 2. Convolutional neural networks (CNNs):
+https://www.youtube.com/watch?v=TCH_1BHY58I&list=PLAqhIrjkxbuWI23v9cThsA9GvCAUhRvKZ&index=3
   * Understanding how CNNs work and how they are used for image classification
   * Understanding the concept of convolution and how it is used in CNNs
   * Understanding the different layers in a CNN (e.g. convolutional layers, pooling layers, fully-connected layers)
   * Training and optimizing CNNs using techniques such as backpropagation and gradient descent
   * Learning about the ResNet architecture and how it is used for image classification
+  https://www.youtube.com/watch?v=P6sfmUTpUmc&list=PLAqhIrjkxbuWI23v9cThsA9GvCAUhRvKZ&index=4
 
 3. Semantic segmentation:
   * Understanding the difference between semantic segmentation and other types of image segmentation (e.g. instance segmentation, panoptic segmentation)
@@ -30,7 +32,7 @@ To open up your new enviroment, do:
 ```bash
 source activate opencvconda
 ```
-
+conda activate torch-gpu
 To make the enviroment again:
 
 ```bash
@@ -59,3 +61,5 @@ Then your terminal should look like this:
 ```
 
 Note the change in conda environment we're in "(base)" -> "(opencvconda)". If you ever want to install more pip packages, you can instead google how to install it using "conda". 
+
+#play neural network
