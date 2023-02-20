@@ -8,13 +8,18 @@ from PIL import Image
 import os
 import numpy as np
 from einops.layers.torch import Rearrange, Reduce
+import pathlib
+import matplotlib.pyplot as plt
 
 img_size = 224
 batch_size = 4 
 # Get a list of all image files in the data directory
 
-# TODO: save and load model, only train if model file isn't there
-# TODO: report accuracy
+# TODO: report accuracy during training
+# TODO: you need a testing set, so gather a test_dataset, and instead of just running inference on one image as you've done, load an image at a time and report average loss and average accuracy for the testing set.
+# TODO: learn about https://scikit-learn.org/stable/modules/generated/sklearn.metrics.f1_score.html#sklearn.metrics.f1_score
+# TODO: report f1_score = sklearn.metrics.f1_score(labels, predicted_labels).
+# TODO: report how many cancerous images are in your training and testing set, and how many non-canerous images are in your train/test set. 
 
 class CancerDataset(Dataset):
     def __init__(self, root_dir, transform=None):
@@ -80,38 +85,55 @@ class SegmentationModel(nn.Module):
         logits = self.classifier(per_feature_response)
         return logits
     
-model = SegmentationModel()
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+MODEL_PATH = 'medical_model.pt'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+if not pathlib.Path(MODEL_PATH).is_file():
+    model = SegmentationModel()
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    
 
-model.to(device)
-losses = []
-for epoch in range(1, 10):
-    for step_id, data in enumerate(train_loader):
-        inputs, labels = data
-        inputs, labels = inputs.to(device), labels.to(device)
+    model.to(device)
+    plot_losses = []
+    losses = []
+    for epoch in range(1, 5):
+        for step_id, data in enumerate(train_loader):
+            inputs, labels = data
+            inputs, labels = inputs.to(device), labels.to(device)
 
-        optimizer.zero_grad()
+            optimizer.zero_grad()
 
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
+            outputs = model(inputs)
+            # output.shape == [B, Class]
+            # find the max value in the class, and report the index. 0 or 1, and we know a 1 is a cancer img
+            # using that, does class_idx == label_idx
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
 
-        losses.append(loss.item())
+            losses.append(loss.item())
 
-        if step_id % 10 == 0:
-            avg_losses = np.array(losses)
-            print(f"Epoch:{epoch}\tStep:{step_id+1}\tCrossEntropyLoss:{avg_losses.mean():0.2f} ± {avg_losses.std():0.2f}")
-            losses = []
+            if step_id % 10 == 0:
+                avg_losses = np.array(losses)
+                print(f"Epoch:{epoch}\tStep:{step_id+1}\tCrossEntropyLoss:{avg_losses.mean():0.2f} ± {avg_losses.std():0.2f}")
+                plot_losses.append(avg_losses.mean())
+                losses = []
 
-print('Finished Training')
-test_image = Image.open("tumour.jpg")
+    plt.plot(plot_losses, label='train loss')
+    print('Finished Training')
+    torch.save(model.state_dict(), MODEL_PATH)
+    plt.show()
 
-test_image = transform(test_image).to(device) # make sure to unsqueeze the tensor to add a batch dimension
-with torch.no_grad():
-    output = model(test_image.unsqueeze(0))
+model = SegmentationModel()
+assert pathlib.Path(MODEL_PATH).is_file()
+model.load_state_dict(torch.load(MODEL_PATH))
+model.eval()
+print("loaded model")
+
+test_image = np.array(Image.open("tumour.jpg").convert('L'))
+
+test_image = transform(test_image).to(device)
+output = model(test_image.unsqueeze(0))
 
 prediction = torch.argmax(output, dim=1).item() # get the index of the predicted class
 if prediction == 0:
