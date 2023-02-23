@@ -1,4 +1,3 @@
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -97,9 +96,7 @@ if not pathlib.Path(MODEL_PATH).is_file():
     model.to(device)
     plot_losses = []
     losses = []
-    
-    for epoch in range(1, 30):
-        model.train()
+    for epoch in range(1, 5):
         for step_id, data in enumerate(train_loader):
             inputs, labels = data
             inputs, labels = inputs.to(device), labels.to(device)
@@ -122,11 +119,7 @@ if not pathlib.Path(MODEL_PATH).is_file():
                 plot_losses.append(avg_losses.mean())
                 losses = []
 
-        model.eval()
-        # add eval code maybe here
-
     plt.plot(plot_losses, label='train loss')
-    #accuracy = (predicted_labels == labels).sum().item() / batch_size
     print('Finished Training')
     torch.save(model.state_dict(), MODEL_PATH)
     plt.show()
@@ -152,7 +145,7 @@ print("loaded model")
 
 # load test dataset
 test_dataset = CancerDataset("test_data", transform=transform)
-test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 # evaluate on test dataset
 criterion = nn.CrossEntropyLoss()
@@ -167,34 +160,23 @@ with torch.no_grad():
         outputs = model(images)
         loss = criterion(outputs, labels)
         test_losses.append(loss.item())
-        class_probability = torch.softmax(outputs.data, 1)
-        print(class_probability)
         _, predicted = torch.max(outputs.data, 1)
         test_predicted += predicted.cpu().numpy().tolist()
         test_labels += labels.cpu().numpy().tolist()
-        break
 
 test_loss = np.mean(test_losses)
 test_accuracy = 100 * np.sum(np.array(test_predicted) == np.array(test_labels)) / len(test_labels)
+from sklearn.metrics import f1_score
 test_f1 = f1_score(test_labels, test_predicted, average='binary')
-
-
-
-#acc = accuracy_score(y_test, y_pred)
-#print("Accuracy:", acc)
-#predicted_labels = torch.argmax(output, dim=1).cpu().numpy()
-#f1 = f1_score(labels.cpu().numpy(), predicted_labels)
-
 print('Loss on test dataset: %0.2f' % (test_loss))
-#print(f'Loss on test dataset: {test_loss:0.2f}')
 print('Accuracy on test dataset: %0.2f %%' % (test_accuracy))
-print(f'F1 score on test dataset: {test_f1*100:0.2f}%')
+print('F1 score on test dataset: %0.2f' % (test_f1))
 
 # print number of cancerous images in train and test datasets
 num_train_cancerous = sum(train_dataset.labels)
 num_test_cancerous = sum(test_dataset.labels)
 test_dataset = CancerDataset("test_data", transform=transform)
 
-
+#num_non_cancerous_test = len(test_dataset) - num_cancerous_test
 print('Number of cancerous images in train dataset: %d' % (num_train_cancerous))
 print('Number of cancerous images in test dataset: %d' % (num_test_cancerous))

@@ -1,4 +1,3 @@
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -10,7 +9,9 @@ import numpy as np
 from einops.layers.torch import Rearrange, Reduce
 import pathlib
 import matplotlib.pyplot as plt
+from pathlib import Path
 from sklearn.metrics import f1_score
+from matplotlib.ticker import MaxNLocator
 
 img_size = 224
 batch_size = 4 
@@ -88,19 +89,31 @@ class SegmentationModel(nn.Module):
     
 MODEL_PATH = 'medical_model.pt'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-if not pathlib.Path(MODEL_PATH).is_file():
+if pathlib.Path(MODEL_PATH).is_file():
+    print("Doing something")
     model = SegmentationModel()
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     
     criterion = nn.CrossEntropyLoss()
     model.to(device)
-    plot_losses = []
-    losses = []
-    
-    for epoch in range(1, 30):
-        model.train()
+    train_losses=[]
+
+    # plot_losses = []
+    # losses = []
+    # train_losses=[]
+    # train_accs = []
+    # train_f1s = []
+    # av_loss_array=[]
+    for epoch in range(1, 3):
+        epoch_losses = []
+        # epoch_correct = 0
+        # epoch_f1 = 0.0
+        # epoch_total = 0
+        
         for step_id, data in enumerate(train_loader):
+            if step_id==5:
+                break
             inputs, labels = data
             inputs, labels = inputs.to(device), labels.to(device)
 
@@ -113,23 +126,42 @@ if not pathlib.Path(MODEL_PATH).is_file():
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
+            epoch_losses.append(loss.item())
+            # epoch_loss += loss.item() * inputs.size(0)
+            # _, predicted = torch.max(outputs.data, 1)
+            # epoch_correct += (predicted == labels).sum().item()
+            # epoch_total += labels.size(0)
+            # epoch_f1 += f1_score(labels.cpu().numpy(), predicted.cpu().numpy(), average='binary') * labels.size(0)
+            # print("Doing something")
+            # if step_id % 10 == 0:
+            #     avg_losses = np.array(losses)
+            #     print(f"Epoch:{epoch}\tStep:{step_id+1}\tCrossEntropyLoss:{avg_losses.mean():0.2f} ± {avg_losses.std():0.2f}")
+            #     plot_losses.append(avg_losses.mean())
+            #     losses = 
 
-            losses.append(loss.item())
+            #     train_losses.append(epoch_loss / epoch_total)
+            #     train_acc = 100 * epoch_correct / epoch_total
+            #     train_f1 = epoch_f1 / epoch_total
+            #     train_accs.append(train_acc)
+            #     train_f1s.append(train_f1)
+            #     plt.plot(train_losses, label='train loss')
+ 
+            #     plt.legend()
+            #     plt.show()
 
-            if step_id % 10 == 0:
-                avg_losses = np.array(losses)
-                print(f"Epoch:{epoch}\tStep:{step_id+1}\tCrossEntropyLoss:{avg_losses.mean():0.2f} ± {avg_losses.std():0.2f}")
-                plot_losses.append(avg_losses.mean())
-                losses = []
+        epoch_losses = np.array(epoch_losses) 
+        avg_epoch_losses = epoch_losses.mean()
+        train_losses.append(avg_epoch_losses)
 
-        model.eval()
-        # add eval code maybe here
-
-    plt.plot(plot_losses, label='train loss')
-    #accuracy = (predicted_labels == labels).sum().item() / batch_size
-    print('Finished Training')
-    torch.save(model.state_dict(), MODEL_PATH)
+    plt.plot(train_losses, label='Train Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.title('Train Loss')
+    plt.savefig('train_loss.jpeg')
     plt.show()
+
+    print('Finished Training')
+    # torch.save(model.state_dict(), MODEL_PATH)
 
 model = SegmentationModel()
 assert pathlib.Path(MODEL_PATH).is_file()
@@ -152,7 +184,7 @@ print("loaded model")
 
 # load test dataset
 test_dataset = CancerDataset("test_data", transform=transform)
-test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 # evaluate on test dataset
 criterion = nn.CrossEntropyLoss()
@@ -160,6 +192,9 @@ model.eval()
 test_losses = []
 test_predicted = []
 test_labels = []
+test_accs=[]
+tests_f1=[]
+tests_f1s=[]
 with torch.no_grad():
     for data in test_loader:
         images, labels = data
@@ -167,34 +202,43 @@ with torch.no_grad():
         outputs = model(images)
         loss = criterion(outputs, labels)
         test_losses.append(loss.item())
-        class_probability = torch.softmax(outputs.data, 1)
-        print(class_probability)
-        _, predicted = torch.max(outputs.data, 1)
+        _, predicted = torch.max(outputs.data, axis=1)
         test_predicted += predicted.cpu().numpy().tolist()
         test_labels += labels.cpu().numpy().tolist()
-        break
-
+        test_accuracys = 100 * np.sum(np.array(test_predicted) == np.array(test_labels)) / len(test_labels)
+        test_accs.append(test_accuracys)
+        tests_f1 = f1_score(test_labels, test_predicted, average='binary')
+        tests_f1s.append(f1_score(test_labels, test_predicted, average='binary'))
 test_loss = np.mean(test_losses)
 test_accuracy = 100 * np.sum(np.array(test_predicted) == np.array(test_labels)) / len(test_labels)
+#test_accs.append(test_accuracy)
+from sklearn.metrics import f1_score
 test_f1 = f1_score(test_labels, test_predicted, average='binary')
-
-
-
-#acc = accuracy_score(y_test, y_pred)
-#print("Accuracy:", acc)
-#predicted_labels = torch.argmax(output, dim=1).cpu().numpy()
-#f1 = f1_score(labels.cpu().numpy(), predicted_labels)
-
+#tests_f1.append(f1_score(test_labels, test_predicted, average='binary'))
 print('Loss on test dataset: %0.2f' % (test_loss))
-#print(f'Loss on test dataset: {test_loss:0.2f}')
 print('Accuracy on test dataset: %0.2f %%' % (test_accuracy))
-print(f'F1 score on test dataset: {test_f1*100:0.2f}%')
+print('F1 score on test dataset: %0.2f' % (test_f1))
 
 # print number of cancerous images in train and test datasets
 num_train_cancerous = sum(train_dataset.labels)
 num_test_cancerous = sum(test_dataset.labels)
 test_dataset = CancerDataset("test_data", transform=transform)
 
-
+#num_non_cancerous_test = len(test_dataset) - num_cancerous_test
 print('Number of cancerous images in train dataset: %d' % (num_train_cancerous))
 print('Number of cancerous images in test dataset: %d' % (num_test_cancerous))
+
+#plt.plot(train_losses, label='train loss')
+plt.plot(test_losses, label='test loss')
+plt.legend()
+plt.show()
+
+#plt.plot(train_accs, label='train accuracy')
+plt.plot(test_accs, label='test accuracy')
+plt.legend()
+plt.show()
+
+#plt.plot(train_f1s, label='train f1 score')
+plt.plot(tests_f1s, label='test f1 score')
+plt.legend()
+plt.show()
